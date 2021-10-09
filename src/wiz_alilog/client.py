@@ -32,7 +32,7 @@ class AliLogClient(object):
         full_list = []
         total_count = self._total_count(start_timestamp, end_timestamp, query)
         total_count = min(total_count, self.limit) if self.limit > 0 else total_count
-        log_line = 3000
+        log_line = min(3000, total_count)
         for offset in range(0, total_count, log_line):
             res4 = None
             for retry_time in range(0, 3):
