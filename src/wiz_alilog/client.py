@@ -55,6 +55,7 @@ class AliLogClient(object):
             config = r.body
             config['configuration']['muteUntil'] = until
             r = self.client.update_alert(self.project if not project else project, config)
+            return True
         except:
             return False
         
