@@ -26,17 +26,17 @@ class AliLogClient(object):
     def __exit__(self, exc_type, exc_val, exc_tb):
         pass
 
-    def query(self, start_time=None, end_time=None, query="", time_format="%Y-%m-%d %H:%M:%S"):
-        start_timestamp = 0 if start_time is None else time.mktime(time.strptime(start_time, time_format))
-        end_timestamp = time.time() if end_time is None else time.mktime(time.strptime(end_time, time_format))
+    def query(self, start_timestamp, end_timestamp, query="", logstore=None):
         full_list = []
         total_count = self._total_count(start_timestamp, end_timestamp, query)
         total_count = min(total_count, self.limit) if self.limit > 0 else total_count
+        if total_count == 0:
+            return full_list
         log_line = min(3000, total_count)
         for offset in range(0, total_count, log_line):
             res4 = None
-            for retry_time in range(0, 3):
-                req4 = GetLogsRequest(self.project, self.logstore, start_timestamp, end_timestamp, "", query, log_line,
+            for _ in range(0, 3):
+                req4 = GetLogsRequest(self.project, self.logstore if not logstore else logstore, start_timestamp, end_timestamp, "", query, log_line,
                                       offset, False)
                 res4 = self.client.get_logs(req4)
                 if res4 is not None and res4.is_completed():
@@ -46,3 +46,15 @@ class AliLogClient(object):
                 for item in res4.get_body():
                     full_list.append(item)
         return full_list
+
+    def mute_alert(self, alert_name, project=None, until=0):
+        if until <= 0:
+            return False
+        try:
+            r = self.client.get_alert(self.project if not project else project, alert_name)
+            config = r.body
+            config['configuration']['muteUntil'] = until
+            r = self.client.update_alert(self.project if not project else project, config)
+        except:
+            return False
+        
